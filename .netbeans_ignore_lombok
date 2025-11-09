@@ -1,0 +1,4 @@
+# NetBeans: Ignorar errores de Lombok
+# Este archivo indica a NetBeans que ignore los errores de procesamiento de anotaciones de Lombok.
+# Lombok funcionará correctamente durante la compilación con Maven.
+

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project-shared-configuration>
+    <!--
+        NetBeans configuration to disable Lombok annotation processing.
+        This prevents IDE errors while Lombok still works during Maven compilation.
+    -->
+    <properties xmlns="http://www.netbeans.org/ns/maven-properties-data/1">
+        <netbeans.hint.jdkPlatform>JDK_17</netbeans.hint.jdkPlatform>
+    </properties>
+    <!-- Disable annotation processing in NetBeans to avoid Lombok compatibility issues -->
+    <annotation-processing>
+        <enabled>false</enabled>
+        <source-output-directory>target/generated-sources/annotations</source-output-directory>
+        <processor-output-directory>target/generated-sources/annotations</processor-output-directory>
+        <processors>
+            <!-- Explicitly exclude Lombok processor -->
+        </processors>
+    </annotation-processing>
+</project-shared-configuration>
