@@ -1,45 +1,70 @@
 # API Gateway Microservice
 
-API Gateway que orquesta las llamadas a los microservicios de seguridad (Domain Service) y gestión de perfiles (Gestion Perfil Service).
+API Gateway desarrollado en Java con Spring Boot que actúa como punto de entrada único para las solicitudes de los clientes. Orquesta las llamadas a los microservicios de seguridad (Domain Service) y gestión de perfiles (Gestion Perfil Service), proporcionando una API unificada y simplificada.
 
-## 🎯 Funcionalidades
+## Funcionalidades
 
 ### Endpoints de Proxy Simple
 
-1. **Registro de Usuario**
-   - `POST /api/v1/auth/registro`
-   - Redirige a `POST /v1/usuarios` del Domain Service
+Estos endpoints redirigen directamente las solicitudes a los microservicios backend sin transformación adicional.
 
-2. **Autenticación**
-   - `POST /api/v1/auth/login`
-   - Redirige a `POST /v1/sesiones` del Domain Service
+#### Registro de Usuario
 
-3. **Eliminación de Usuario**
-   - `DELETE /api/v1/auth/usuarios/{usuario}`
-   - Redirige a `DELETE /v1/usuarios/{usuario}` del Domain Service
-   - **Publica evento `ELIMINACION_USUARIO` en RabbitMQ**
+- **Endpoint**: `POST /api/v1/auth/registro`
+- **Descripción**: Registra un nuevo usuario en el sistema
+- **Redirección**: `POST /v1/usuarios` del Domain Service
+- **Autenticación**: No requerida
+
+#### Autenticación
+
+- **Endpoint**: `POST /api/v1/auth/login`
+- **Descripción**: Autentica un usuario y genera un token JWT
+- **Redirección**: `POST /v1/sesiones` del Domain Service
+- **Autenticación**: No requerida
+
+#### Eliminación de Usuario
+
+- **Endpoint**: `DELETE /api/v1/auth/usuarios/{usuario}`
+- **Descripción**: Elimina un usuario del Domain Service y publica evento de eliminación
+- **Redirección**: `DELETE /v1/usuarios/{usuario}` del Domain Service
+- **Autenticación**: Requerida (JWT Bearer Token)
+- **Evento**: Publica evento `ELIMINACION_USUARIO` en RabbitMQ
 
 ### Endpoints de Unificación
 
-1. **Consulta de Usuario Completo**
-   - `GET /api/v1/usuarios/{usuario}`
-   - Obtiene datos de seguridad del Domain Service
-   - Obtiene datos de perfil del Gestion Perfil Service
-   - Unifica y retorna respuesta combinada
+Estos endpoints combinan datos de múltiples microservicios para proporcionar una vista unificada del usuario.
 
-2. **Actualización de Usuario Completo**
-   - `PUT /api/v1/usuarios/{usuario}`
-   - Divide los datos entre seguridad y perfil
-   - Actualiza ambos servicios en paralelo
-   - Retorna respuesta unificada
+#### Consulta de Usuario Completo
 
-3. **Eliminación Completa de Usuario**
-   - `DELETE /api/v1/usuarios/{usuario}`
-   - Elimina del Domain Service
-   - Elimina del Gestion Perfil Service
-   - **Publica evento `ELIMINACION_USUARIO` en RabbitMQ**
+- **Endpoint**: `GET /api/v1/usuarios/{usuario}`
+- **Descripción**: Obtiene datos completos del usuario combinando información de seguridad y perfil
+- **Autenticación**: Requerida (JWT Bearer Token)
+- **Proceso**: Obtiene datos de seguridad del Domain Service y datos de perfil del Gestion Perfil Service, luego unifica y retorna respuesta combinada
 
-## 🔧 Configuración
+#### Actualización de Usuario Completo
+
+- **Endpoint**: `PUT /api/v1/usuarios/{usuario}`
+- **Descripción**: Actualiza datos de seguridad y perfil en paralelo
+- **Autenticación**: Requerida (JWT Bearer Token)
+- **Proceso**: Divide los datos entre seguridad y perfil, actualiza ambos servicios en paralelo usando `Mono.zip()`, retorna respuesta unificada
+
+#### Eliminación Completa de Usuario
+
+- **Endpoint**: `DELETE /api/v1/usuarios/{usuario}`
+- **Descripción**: Elimina el usuario de ambos servicios y publica evento
+- **Autenticación**: Requerida (JWT Bearer Token)
+- **Proceso**: Elimina del Domain Service, elimina del Gestion Perfil Service, publica evento `ELIMINACION_USUARIO` en RabbitMQ
+
+## Tecnologías
+
+- Spring Boot 3.x
+- Spring WebFlux (Programación reactiva)
+- Project Reactor (Mono, Flux)
+- Spring AMQP (RabbitMQ)
+- Jackson (Serialización JSON)
+- Lombok
+
+## Configuración
 
 ### Variables de Entorno
 
@@ -58,9 +83,12 @@ SPRING_RABBITMQ_PORT=5672
 SPRING_RABBITMQ_USERNAME=domain_user
 SPRING_RABBITMQ_PASSWORD=domain_pass
 SPRING_RABBITMQ_VIRTUAL_HOST=foro
+
+# Server
+SERVER_PORT=8085
 ```
 
-## 🚀 Uso
+## Uso
 
 ### Registro de Usuario
 
@@ -113,7 +141,7 @@ curl -X DELETE http://localhost:8085/api/v1/usuarios/testuser \
   -H "Authorization: Bearer <token>"
 ```
 
-## 📋 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 api-gateway-micro/
@@ -140,23 +168,57 @@ api-gateway-micro/
 │   │   └── resources/
 │   │       └── application.properties
 │   └── test/
+│       ├── controller/
+│       ├── service/
+│       ├── messaging/
+│       └── integration/
+├── docs/
+│   └── IMPLEMENTATION.md
 ├── Dockerfile
 ├── pom.xml
 └── README.md
 ```
 
-## 🔌 Integración con Docker Compose
+## Integración con Docker Compose
 
 El API Gateway está configurado en `docker-compose.unified.yml` y se ejecuta en el puerto **8085**.
 
-## 🏥 Health Check
+## Health Check
 
 ```bash
 curl http://localhost:8085/actuator/health
 ```
 
-## 📝 Notas
+## Testing
+
+El proyecto incluye una suite completa de tests:
+
+- **Unit Tests**: 43 tests unitarios
+  - AuthController: 10 tests
+  - UsuarioController: 14 tests
+  - UsuarioUnificadoService: 11 tests
+  - EventoPublisher: 8 tests
+- **Integration Tests**: 22 tests de integración
+  - AuthControllerIntegrationTest: 10 tests
+  - UsuarioControllerIntegrationTest: 12 tests
+
+## Programación Reactiva
+
+El microservicio utiliza Project Reactor para programación reactiva:
+- **Mono**: Representa un valor único o vacío (0 o 1 elemento)
+- **Flux**: Representa una secuencia de valores (0 o N elementos)
+- **Operadores**: `map()`, `flatMap()`, `zip()`, `onErrorResume()`, etc.
+
+## Integración con RabbitMQ
+
+El API Gateway publica eventos de dominio a RabbitMQ:
+- **Exchange**: `dominio.events` (tipo topic)
+- **Routing Key**: `auth.deleted`
+- **Evento**: `ELIMINACION_USUARIO` cuando se elimina un usuario
+
+## Notas
 
 - Todos los endpoints requieren autenticación excepto `/auth/registro` y `/auth/login`
 - El token JWT debe enviarse en el header `Authorization: Bearer <token>`
 - Los eventos de eliminación se publican en el exchange `dominio.events` con routing key `auth.deleted`
+- Para documentación detallada, consultar `docs/IMPLEMENTATION.md`
