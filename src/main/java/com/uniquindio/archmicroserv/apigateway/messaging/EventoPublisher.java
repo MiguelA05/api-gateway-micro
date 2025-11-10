@@ -5,6 +5,8 @@ import com.uniquindio.archmicroserv.apigateway.config.RabbitMQConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -13,6 +15,12 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
+@ConditionalOnProperty(
+    prefix = "spring.rabbitmq",
+    name = "host",
+    matchIfMissing = false
+)
+@Profile("!test")
 public class EventoPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(EventoPublisher.class);
