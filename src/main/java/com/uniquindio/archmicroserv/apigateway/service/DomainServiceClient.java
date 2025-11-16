@@ -65,6 +65,22 @@ public class DomainServiceClient {
                 .uri(basePath + "/usuarios/" + usuario)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + authToken)
                 .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), 
+                    response -> {
+                        log.error("Error eliminando usuario: {} {}", response.statusCode(), response.statusCode().value());
+                        return response.bodyToMono(String.class)
+                            .flatMap(errorBody -> {
+                                org.springframework.web.reactive.function.client.WebClientResponseException exception = 
+                                    org.springframework.web.reactive.function.client.WebClientResponseException.create(
+                                        response.statusCode().value(),
+                                        response.statusCode().toString(),
+                                        response.headers().asHttpHeaders(),
+                                        errorBody != null ? errorBody.getBytes() : null,
+                                        java.nio.charset.StandardCharsets.UTF_8
+                                    );
+                                return Mono.error(exception);
+                            });
+                    })
                 .bodyToMono(Objects.requireNonNull(MAP_TYPE_REF, "MAP_TYPE_REF must not be null"))
                 .doOnSuccess(response -> log.info("Usuario eliminado exitosamente"))
                 .doOnError(error -> log.error("Error eliminando usuario: {}", error.getMessage()));
@@ -72,10 +88,7 @@ public class DomainServiceClient {
 
     public Mono<Map<String, Object>> obtenerUsuario(String usuario, String authToken) {
         log.info("Proxy: GET {}/usuarios (con filtro para usuario: {})", basePath, usuario);
-        // El Domain Service no tiene endpoint GET /usuarios/{usuario}, 
-        // solo tiene GET /usuarios?pagina=X que retorna lista paginada
-        // Por ahora retornamos un Mono vacío o intentamos obtener de la lista
-        // En producción, esto debería usar el endpoint correcto si existe
+        
         return domainServiceWebClient
                 .get()
                 .uri(uriBuilder -> uriBuilder

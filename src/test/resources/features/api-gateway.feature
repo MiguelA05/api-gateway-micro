@@ -41,6 +41,23 @@ Característica: API Gateway - Gestión de usuarios unificada
     Entonces la respuesta debe tener estado 200
     Y el cuerpo debe indicar éxito
 
+  # ===== ELIMINACIÓN DE USUARIO (AUTH CONTROLLER) =====
+  # Este endpoint requiere rol ADMIN, se usa el usuario admin creado en el setup
+  Escenario: Eliminar usuario a través del Auth Controller
+    Dado que existe un usuario registrado válido
+    Y que he iniciado sesión exitosamente
+    Cuando elimino el usuario a través del Auth Controller
+    Entonces la respuesta debe tener estado 200
+    Y el cuerpo debe indicar éxito
+
+  # ===== ELIMINACIÓN DE USUARIO COMPLETO (USUARIO CONTROLLER) =====
+  Escenario: Eliminar usuario completo a través del Usuario Controller
+    Dado que existe un usuario registrado válido
+    Y que he iniciado sesión exitosamente
+    Cuando elimino el usuario completo a través del Usuario Controller
+    Entonces la respuesta debe tener estado 200
+    Y el cuerpo debe indicar éxito
+
   # ===== HEALTH CHECK =====
   Escenario: Verificar salud del API Gateway
     Cuando consulto el endpoint de health check

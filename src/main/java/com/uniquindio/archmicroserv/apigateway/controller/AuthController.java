@@ -191,6 +191,31 @@ public class AuthController {
                 .map(response -> ResponseEntity.ok(response))
                 .onErrorResume(error -> {
                     log.error("Error eliminando usuario: {}", error.getMessage());
+                    // Manejar WebClientResponseException para códigos HTTP específicos
+                    if (error instanceof org.springframework.web.reactive.function.client.WebClientResponseException) {
+                        org.springframework.web.reactive.function.client.WebClientResponseException webClientError = 
+                            (org.springframework.web.reactive.function.client.WebClientResponseException) error;
+                        int statusCode = webClientError.getStatusCode().value();
+                        
+                        if (statusCode == 403) {
+                            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                    .body(Map.of("error", true, "respuesta", "No tiene permisos para eliminar usuarios")));
+                        }
+                        if (statusCode == 404) {
+                            return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                    .body(Map.of("error", true, "respuesta", "Usuario no encontrado")));
+                        }
+                    }
+                    // Si es 403 en el mensaje de error
+                    if (error.getMessage() != null && error.getMessage().contains("403")) {
+                        return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(Map.of("error", true, "respuesta", "No tiene permisos para eliminar usuarios")));
+                    }
+                    // Si es 404 en el mensaje de error
+                    if (error.getMessage() != null && error.getMessage().contains("404")) {
+                        return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .body(Map.of("error", true, "respuesta", "Usuario no encontrado")));
+                    }
                     return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                             .body(Map.of("error", true, "respuesta", "Error eliminando usuario")));
                 });

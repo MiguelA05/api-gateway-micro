@@ -135,6 +135,13 @@
             <version>2.3.1</version>
             <scope>test</scope>
         </dependency>
+        
+        <!-- PostgreSQL JDBC Driver for test setup -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
