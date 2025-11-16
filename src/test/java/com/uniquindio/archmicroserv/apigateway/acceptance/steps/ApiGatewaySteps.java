@@ -260,16 +260,11 @@ public class ApiGatewaySteps {
             ultimoToken, allOf(notNullValue(), not(blankOrNullString())));
         
         Object errorObj = lastResponse.jsonPath().get("error");
-        if (errorObj != null) {
-            Boolean error = null;
-            if (errorObj instanceof Boolean) {
-                error = (Boolean) errorObj;
-            } else if (errorObj instanceof String) {
-                error = Boolean.parseBoolean((String) errorObj);
-            }
-            if (error != null) {
-                assertThat("La respuesta de login debe indicar error: false", error, is(false));
-            }
+        if (errorObj instanceof Boolean error) {
+            assertThat("La respuesta de login debe indicar error: false", error, is(false));
+        } else if (errorObj instanceof String errorStr) {
+            Boolean error = Boolean.parseBoolean(errorStr);
+            assertThat("La respuesta de login debe indicar error: false", error, is(false));
         }
     }
 
@@ -399,26 +394,19 @@ public class ApiGatewaySteps {
         assertThat("El cuerpo de la respuesta no debe estar vacío", raw, not(blankOrNullString()));
         
         Object errorObj = lastResponse.jsonPath().get("error");
-        if (errorObj != null) {
-            Boolean error = null;
-            if (errorObj instanceof Boolean) {
-                error = (Boolean) errorObj;
-            } else if (errorObj instanceof String) {
-                error = Boolean.parseBoolean((String) errorObj);
-            }
-            if (error != null) {
-                assertThat("La respuesta debe indicar error: false para éxito", error, is(false));
-            }
+        if (errorObj instanceof Boolean error) {
+            assertThat("La respuesta debe indicar error: false para éxito", error, is(false));
+        } else if (errorObj instanceof String errorStr) {
+            Boolean error = Boolean.parseBoolean(errorStr);
+            assertThat("La respuesta debe indicar error: false para éxito", error, is(false));
         }
         
         Object respuesta = lastResponse.jsonPath().get("respuesta");
         if (respuesta == null) {
-            assertThat("La respuesta debe tener contenido válido", raw.length(), greaterThan(0));
-        } else {
-            if (respuesta instanceof String) {
-                assertThat("El campo 'respuesta' no debe estar vacío si es string", 
-                    (String) respuesta, not(blankOrNullString()));
-            }
+            assertThat("La respuesta debe tener contenido válido", raw != null ? raw.length() : 0, greaterThan(0));
+        } else if (respuesta instanceof String respuestaStr) {
+            assertThat("El campo 'respuesta' no debe estar vacío si es string", 
+                respuestaStr, not(blankOrNullString()));
         }
     }
 
@@ -471,9 +459,8 @@ public class ApiGatewaySteps {
         assertThat("La respuesta debe tener estructura válida con campo 'usuario'", 
             usuario, notNullValue());
         
-        if (perfil != null) {
-            assertThat("Si existe perfil, debe ser un objeto válido", 
-                perfil, instanceOf(java.util.Map.class));
+        if (perfil instanceof java.util.Map) {
+            // Perfil válido como objeto Map
         }
     }
 
