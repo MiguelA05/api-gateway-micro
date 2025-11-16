@@ -4,6 +4,16 @@ import com.uniquindio.archmicroserv.apigateway.messaging.EventoPublisher;
 import com.uniquindio.archmicroserv.apigateway.service.DomainServiceClient;
 import com.uniquindio.archmicroserv.apigateway.service.GestionPerfilServiceClient;
 import com.uniquindio.archmicroserv.apigateway.service.UsuarioUnificadoService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +25,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/usuarios")
+@Tag(name = "Gestión de Usuarios", description = "Endpoints para gestión completa de usuarios y perfiles")
 public class UsuarioController {
 
     private static final Logger log = LoggerFactory.getLogger(UsuarioController.class);
@@ -35,9 +46,42 @@ public class UsuarioController {
         this.eventoPublisher = eventoPublisher;
     }
 
+    @Operation(
+        summary = "Obtener usuario completo",
+        description = "Obtiene los datos completos de un usuario incluyendo su perfil (requiere autenticación)",
+        security = @SecurityRequirement(name = "bearer-jwt")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Usuario encontrado exitosamente",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = "{\"usuario\": \"john_doe\", \"perfil\": {\"nombre\": \"John\", \"apellido\": \"Doe\", \"telefono\": \"1234567890\"}}"
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "No autorizado - Token inválido o ausente",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = "{\"error\": true, \"respuesta\": \"Token de autenticación requerido\"}"
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "500",
+            description = "Error interno del servidor"
+        )
+    })
     @GetMapping("/{usuario}")
     public Mono<ResponseEntity<Map<String, Object>>> obtenerUsuarioCompleto(
+            @Parameter(description = "Nombre de usuario a buscar", required = true, example = "john_doe")
             @PathVariable String usuario,
+            @Parameter(description = "Token JWT de autenticación", required = true, example = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
             @RequestHeader(value = "Authorization", required = false) String authToken) {
         log.info("API Gateway: Obteniendo datos completos del usuario {}", usuario);
 
@@ -72,10 +116,47 @@ public class UsuarioController {
                 });
     }
 
+    @Operation(
+        summary = "Actualizar usuario completo",
+        description = "Actualiza los datos de un usuario en todos los microservicios (requiere autenticación)",
+        security = @SecurityRequirement(name = "bearer-jwt")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Usuario actualizado exitosamente",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = "{\"error\": false, \"respuesta\": \"Usuario actualizado exitosamente\"}"
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "No autorizado - Token inválido o ausente"
+        ),
+        @ApiResponse(
+            responseCode = "500",
+            description = "Error actualizando datos del usuario"
+        )
+    })
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+        description = "Datos del usuario a actualizar (puede incluir correo, clave, nombre, apellido, telefono)",
+        required = true,
+        content = @Content(
+            mediaType = "application/json",
+            examples = @ExampleObject(
+                value = "{\"correo\": \"newemail@example.com\", \"nombre\": \"John\", \"apellido\": \"Doe\", \"telefono\": \"9876543210\"}"
+            )
+        )
+    )
     @PutMapping("/{usuario}")
     public Mono<ResponseEntity<Map<String, Object>>> actualizarUsuarioCompleto(
+            @Parameter(description = "Nombre de usuario a actualizar", required = true, example = "john_doe")
             @PathVariable String usuario,
             @RequestBody Map<String, Object> requestBody,
+            @Parameter(description = "Token JWT de autenticación", required = true, example = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
             @RequestHeader(value = "Authorization", required = false) String authToken) {
         log.info("API Gateway: Actualizando datos completos del usuario {}", usuario);
 
@@ -95,9 +176,36 @@ public class UsuarioController {
                 });
     }
 
+    @Operation(
+        summary = "Eliminar usuario completo",
+        description = "Elimina un usuario de todos los microservicios del sistema (requiere autenticación)",
+        security = @SecurityRequirement(name = "bearer-jwt")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Usuario eliminado exitosamente del sistema",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = "{\"error\": false, \"respuesta\": \"Usuario eliminado exitosamente del sistema\"}"
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "No autorizado - Token inválido o ausente"
+        ),
+        @ApiResponse(
+            responseCode = "500",
+            description = "Error eliminando usuario"
+        )
+    })
     @DeleteMapping("/{usuario}")
     public Mono<ResponseEntity<Map<String, Object>>> eliminarUsuarioCompleto(
+            @Parameter(description = "Nombre de usuario a eliminar", required = true, example = "john_doe")
             @PathVariable String usuario,
+            @Parameter(description = "Token JWT de autenticación", required = true, example = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
             @RequestHeader(value = "Authorization", required = false) String authToken) {
         log.info("API Gateway: Eliminación completa del usuario {}", usuario);
 

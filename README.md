@@ -2,6 +2,16 @@
 
 API Gateway desarrollado en Java con Spring Boot que actúa como punto de entrada único para las solicitudes de los clientes. Orquesta las llamadas a los microservicios de seguridad (Domain Service) y gestión de perfiles (Gestion Perfil Service), proporcionando una API unificada y simplificada.
 
+## 📚 Documentación con Swagger UI
+
+Este proyecto incluye documentación interactiva de la API usando **OpenAPI 3.0** y **Swagger UI**.
+
+### 🌐 Acceso a Swagger UI
+
+- **Swagger UI**: http://localhost:8085/swagger-ui.html
+- **API Docs (JSON)**: http://localhost:8085/api-docs
+- **API Docs (YAML)**: http://localhost:8085/api-docs.yaml
+
 ## Funcionalidades
 
 ### Endpoints de Proxy Simple

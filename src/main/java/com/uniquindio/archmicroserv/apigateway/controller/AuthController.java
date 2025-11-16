@@ -16,10 +16,19 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.uniquindio.archmicroserv.apigateway.service.DomainServiceClient;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/v1")
+@Tag(name = "Autenticación", description = "Endpoints para gestión de autenticación y registro de usuarios")
 public class AuthController {
 
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
@@ -30,6 +39,42 @@ public class AuthController {
         this.domainServiceClient = domainServiceClient;
     }
 
+    @Operation(
+        summary = "Registrar nuevo usuario",
+        description = "Crea un nuevo usuario en el sistema con credenciales de acceso"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "201",
+            description = "Usuario creado exitosamente",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = "{\"error\": false, \"respuesta\": {\"usuario\": \"john_doe\", \"correo\": \"john@example.com\"}}"
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "500",
+            description = "Error procesando el registro",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = "{\"error\": true, \"respuesta\": \"Error procesando registro\"}"
+                )
+            )
+        )
+    })
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+        description = "Datos del usuario a registrar",
+        required = true,
+        content = @Content(
+            mediaType = "application/json",
+            examples = @ExampleObject(
+                value = "{\"usuario\": \"john_doe\", \"correo\": \"john@example.com\", \"clave\": \"password123\"}"
+            )
+        )
+    )
     @PostMapping("/auth/registro")
     public Mono<ResponseEntity<Map<String, Object>>> registrarUsuario(@RequestBody Map<String, Object> requestBody) {
         log.info("API Gateway: Registro de usuario");
@@ -42,6 +87,42 @@ public class AuthController {
                 });
     }
 
+    @Operation(
+        summary = "Autenticar usuario",
+        description = "Autentica un usuario y retorna un token JWT"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Autenticación exitosa",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = "{\"error\": false, \"respuesta\": {\"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\", \"usuario\": \"john_doe\"}}"
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Credenciales inválidas",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = "{\"error\": true, \"respuesta\": \"Credenciales inválidas\"}"
+                )
+            )
+        )
+    })
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+        description = "Credenciales de autenticación",
+        required = true,
+        content = @Content(
+            mediaType = "application/json",
+            examples = @ExampleObject(
+                value = "{\"usuario\": \"john_doe\", \"clave\": \"password123\"}"
+            )
+        )
+    )
     @PostMapping("/auth/login")
     public Mono<ResponseEntity<Map<String, Object>>> autenticar(@RequestBody Map<String, Object> requestBody) {
         log.info("API Gateway: Autenticación de usuario");
@@ -54,9 +135,48 @@ public class AuthController {
                 });
     }
 
+    @Operation(
+        summary = "Eliminar usuario",
+        description = "Elimina un usuario del sistema (requiere autenticación)",
+        security = @SecurityRequirement(name = "bearer-jwt")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Usuario eliminado exitosamente",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = "{\"error\": false, \"respuesta\": \"Usuario eliminado exitosamente\"}"
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "No autorizado - Token inválido o ausente",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = "{\"error\": true, \"respuesta\": \"Token de autenticación requerido\"}"
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "500",
+            description = "Error interno del servidor",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = "{\"error\": true, \"respuesta\": \"Error eliminando usuario\"}"
+                )
+            )
+        )
+    })
     @DeleteMapping("/auth/usuarios/{usuario}")
     public Mono<ResponseEntity<Map<String, Object>>> eliminarUsuario(
+            @Parameter(description = "Nombre de usuario a eliminar", required = true, example = "john_doe")
             @PathVariable String usuario,
+            @Parameter(description = "Token JWT de autenticación", required = true, example = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
             @RequestHeader(value = "Authorization", required = false) String authToken) {
         log.info("API Gateway: Eliminación de usuario {}", usuario);
         
