@@ -17,6 +17,28 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitarios para {@link UsuarioUnificadoService}.
+ * 
+ * <p>Esta clase de pruebas valida el comportamiento del servicio que unifica
+ * las operaciones de actualización de datos de usuario, coordinando llamadas
+ * a múltiples microservicios (Domain Service y Gestion Perfil Service).</p>
+ * 
+ * <p><strong>Alcance de las pruebas:</strong>
+ * <ul>
+ *   <li>Actualización de datos de seguridad únicamente</li>
+ *   <li>Actualización de datos de perfil únicamente</li>
+ *   <li>Actualización mixta (seguridad + perfil)</li>
+ *   <li>Manejo de errores en servicios downstream</li>
+ *   <li>Validación de campos vacíos</li>
+ *   <li>Validación de todos los campos de perfil y redes sociales</li>
+ * </ul>
+ * </p>
+ * 
+ * @author Sistema de Pruebas
+ * @version 1.0
+ * @since 2024
+ */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Tests unitarios para UsuarioUnificadoService")
 class UsuarioUnificadoServiceTest {
@@ -44,10 +66,15 @@ class UsuarioUnificadoServiceTest {
         perfilData.put("biografia", "Test bio");
     }
 
+    // ===== TESTS DE ACTUALIZACIÓN POR TIPO DE DATOS =====
+
+    /**
+     * Valida que la actualización funciona correctamente cuando solo se proporcionan
+     * datos de seguridad (correo, clave, numeroTelefono).
+     */
     @Test
     @DisplayName("Actualizar usuario completo - Solo datos de seguridad")
     void testActualizarUsuarioCompleto_OnlySecurityData() {
-        // Given
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("correo", "new@example.com");
         requestBody.put("clave", "newpassword");
@@ -64,11 +91,9 @@ class UsuarioUnificadoServiceTest {
         when(domainServiceClient.actualizarUsuario(eq(testUsuario), eq(expectedSeguridadData), eq(testToken)))
                 .thenReturn(Mono.just(seguridadResponse));
 
-        // When
         Mono<Map<String, Object>> result = 
                 usuarioUnificadoService.actualizarUsuarioCompleto(testUsuario, requestBody, testToken);
 
-        // Then
         StepVerifier.create(result)
                 .assertNext(response -> {
                     assertTrue(response.containsKey("mensaje"));
@@ -81,10 +106,13 @@ class UsuarioUnificadoServiceTest {
         verify(gestionPerfilServiceClient, never()).actualizarPerfil(anyString(), anyMap());
     }
 
+    /**
+     * Valida que la actualización funciona correctamente cuando solo se proporcionan
+     * datos de perfil (apodo, biografia, redes sociales, etc.).
+     */
     @Test
     @DisplayName("Actualizar usuario completo - Solo datos de perfil")
     void testActualizarUsuarioCompleto_OnlyPerfilData() {
-        // Given
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("apodo", "New Nickname");
         requestBody.put("biografia", "New bio");
@@ -103,11 +131,9 @@ class UsuarioUnificadoServiceTest {
         when(gestionPerfilServiceClient.actualizarPerfil(eq(testUsuario), eq(expectedPerfilData)))
                 .thenReturn(Mono.just(perfilResponse));
 
-        // When
         Mono<Map<String, Object>> result = 
                 usuarioUnificadoService.actualizarUsuarioCompleto(testUsuario, requestBody, testToken);
 
-        // Then
         StepVerifier.create(result)
                 .assertNext(response -> {
                     assertEquals("Usuario actualizado exitosamente", response.get("mensaje"));
@@ -119,10 +145,13 @@ class UsuarioUnificadoServiceTest {
         verify(domainServiceClient, never()).actualizarUsuario(anyString(), anyMap(), anyString());
     }
 
+    /**
+     * Valida que la actualización funciona correctamente cuando se proporcionan
+     * datos mixtos (seguridad + perfil), verificando que ambos servicios sean llamados.
+     */
     @Test
     @DisplayName("Actualizar usuario completo - Datos mixtos")
     void testActualizarUsuarioCompleto_MixedData() {
-        // Given
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("correo", "new@example.com");
         requestBody.put("apodo", "New Nickname");
@@ -137,11 +166,9 @@ class UsuarioUnificadoServiceTest {
         when(gestionPerfilServiceClient.actualizarPerfil(anyString(), anyMap()))
                 .thenReturn(Mono.just(perfilResponse));
 
-        // When
         Mono<Map<String, Object>> result = 
                 usuarioUnificadoService.actualizarUsuarioCompleto(testUsuario, requestBody, testToken);
 
-        // Then
         StepVerifier.create(result)
                 .assertNext(response -> {
                     assertEquals("Usuario actualizado exitosamente", response.get("mensaje"));
@@ -156,10 +183,15 @@ class UsuarioUnificadoServiceTest {
                 .actualizarPerfil(eq(testUsuario), anyMap());
     }
 
+    // ===== TESTS DE MANEJO DE ERRORES =====
+
+    /**
+     * Valida que cuando falla la actualización de seguridad, el error se propaga
+     * y no se intenta actualizar el perfil.
+     */
     @Test
     @DisplayName("Actualizar usuario completo - Error en servicio de seguridad")
     void testActualizarUsuarioCompleto_SecurityServiceError() {
-        // Given
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("correo", "new@example.com");
         requestBody.put("apodo", "New Nickname");
@@ -167,20 +199,21 @@ class UsuarioUnificadoServiceTest {
         when(domainServiceClient.actualizarUsuario(anyString(), anyMap(), anyString()))
                 .thenReturn(Mono.error(new RuntimeException("Error de conexión")));
 
-        // When
         Mono<Map<String, Object>> result = 
                 usuarioUnificadoService.actualizarUsuarioCompleto(testUsuario, requestBody, testToken);
 
-        // Then - Debe propagar el error porque la actualización de seguridad falló
         StepVerifier.create(result)
                 .expectError(RuntimeException.class)
                 .verify();
     }
 
+    /**
+     * Valida que cuando falla la actualización de perfil pero la de seguridad
+     * es exitosa, se retorna un mensaje indicando actualización parcial.
+     */
     @Test
     @DisplayName("Actualizar usuario completo - Error en servicio de perfil")
     void testActualizarUsuarioCompleto_PerfilServiceError() {
-        // Given
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("correo", "new@example.com");
         requestBody.put("apodo", "New Nickname");
@@ -190,11 +223,9 @@ class UsuarioUnificadoServiceTest {
         when(gestionPerfilServiceClient.actualizarPerfil(anyString(), anyMap()))
                 .thenReturn(Mono.error(new RuntimeException("Error de conexión")));
 
-        // When
         Mono<Map<String, Object>> result = 
                 usuarioUnificadoService.actualizarUsuarioCompleto(testUsuario, requestBody, testToken);
 
-        // Then - Debe continuar y actualizar seguridad parcialmente
         StepVerifier.create(result)
                 .assertNext(response -> {
                     assertEquals("Usuario actualizado parcialmente (solo seguridad)", response.get("mensaje"));
@@ -202,10 +233,15 @@ class UsuarioUnificadoServiceTest {
                 .verifyComplete();
     }
 
+    // ===== TESTS DE VALIDACIÓN DE CAMPOS =====
+
+    /**
+     * Valida que todos los campos de redes sociales se procesan correctamente
+     * cuando se proporcionan en el request.
+     */
     @Test
     @DisplayName("Actualizar usuario completo - Todos los campos de redes sociales")
     void testActualizarUsuarioCompleto_AllSocialFields() {
-        // Given
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("linkFacebook", "https://facebook.com/user");
         requestBody.put("linkTwitter", "https://twitter.com/user");
@@ -217,11 +253,9 @@ class UsuarioUnificadoServiceTest {
         when(gestionPerfilServiceClient.actualizarPerfil(eq(testUsuario), anyMap()))
                 .thenReturn(Mono.just(new HashMap<>()));
 
-        // When
         Mono<Map<String, Object>> result = 
                 usuarioUnificadoService.actualizarUsuarioCompleto(testUsuario, requestBody, testToken);
 
-        // Then
         StepVerifier.create(result)
                 .assertNext(response -> {
                     assertEquals("Usuario actualizado exitosamente", response.get("mensaje"));
@@ -239,17 +273,18 @@ class UsuarioUnificadoServiceTest {
         ));
     }
 
+    /**
+     * Valida que cuando se envía un request vacío, se retorna un mensaje
+     * indicando que no hay datos para actualizar y no se llama a ningún servicio.
+     */
     @Test
     @DisplayName("Actualizar usuario completo - Datos vacíos")
     void testActualizarUsuarioCompleto_EmptyData() {
-        // Given
         Map<String, Object> emptyRequest = new HashMap<>();
 
-        // When
         Mono<Map<String, Object>> result = 
                 usuarioUnificadoService.actualizarUsuarioCompleto(testUsuario, emptyRequest, testToken);
 
-        // Then - Debe retornar mensaje indicando que no hay datos
         StepVerifier.create(result)
                 .assertNext(response -> {
                     assertEquals("No hay datos para actualizar", response.get("mensaje"));
@@ -260,10 +295,13 @@ class UsuarioUnificadoServiceTest {
         verify(gestionPerfilServiceClient, never()).actualizarPerfil(anyString(), anyMap());
     }
 
+    /**
+     * Valida que todos los campos de perfil se procesan correctamente
+     * cuando se proporcionan en el request.
+     */
     @Test
     @DisplayName("Actualizar usuario completo - Todos los campos de perfil")
     void testActualizarUsuarioCompleto_AllPerfilFields() {
-        // Given
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("apodo", "Nickname");
         requestBody.put("urlPaginaPersonal", "https://example.com");
@@ -276,11 +314,9 @@ class UsuarioUnificadoServiceTest {
         when(gestionPerfilServiceClient.actualizarPerfil(eq(testUsuario), anyMap()))
                 .thenReturn(Mono.just(new HashMap<>()));
 
-        // When
         Mono<Map<String, Object>> result = 
                 usuarioUnificadoService.actualizarUsuarioCompleto(testUsuario, requestBody, testToken);
 
-        // Then
         StepVerifier.create(result)
                 .assertNext(response -> {
                     assertEquals("Usuario actualizado exitosamente", response.get("mensaje"));
@@ -289,35 +325,35 @@ class UsuarioUnificadoServiceTest {
 
         verify(gestionPerfilServiceClient, times(1)).actualizarPerfil(eq(testUsuario), argThat(
             (Map<String, Object> map) -> 
-                map.size() == 7 &&  // 7 campos de perfil
+                map.size() == 7 &&
                 map.containsKey("apodo") &&
                 map.containsKey("biografia") &&
                 map.containsKey("organizacion")
         ));
     }
 
+    /**
+     * Valida el manejo del campo informacionContactoPublica cuando se proporciona
+     * en el request, verificando que se incluye correctamente en los datos de perfil.
+     */
     @Test
     @DisplayName("Actualizar usuario - Campo duplicado informacionContactoPublica")
     void testActualizarUsuarioCompleto_DuplicateField() {
-        // Given - El campo informacionContactoPublica aparece duplicado en el código
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("informacionContactoPublica", "Public contact info");
 
         when(gestionPerfilServiceClient.actualizarPerfil(anyString(), anyMap()))
                 .thenReturn(Mono.just(new HashMap<>()));
 
-        // When
         Mono<Map<String, Object>> result = 
                 usuarioUnificadoService.actualizarUsuarioCompleto(testUsuario, requestBody, testToken);
 
-        // Then
         StepVerifier.create(result)
                 .assertNext(response -> {
                     assertEquals("Usuario actualizado exitosamente", response.get("mensaje"));
                 })
                 .verifyComplete();
 
-        // Verify que el campo se incluye correctamente (aunque aparezca duplicado en el código original)
         verify(gestionPerfilServiceClient, times(1))
                 .actualizarPerfil(eq(testUsuario), argThat(
                     (Map<String, Object> map) -> 
@@ -325,4 +361,3 @@ class UsuarioUnificadoServiceTest {
                 ));
     }
 }
-
