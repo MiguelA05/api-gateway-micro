@@ -32,12 +32,57 @@ public class GestionPerfilServiceClient {
         this.gestionPerfilServiceWebClient = gestionPerfilServiceWebClient;
     }
 
+    public Mono<Map<String, Object>> crearPerfil(String usuarioId, Object requestBody) {
+        log.info("Proxy: POST {}/{}", basePath, usuarioId);
+        return gestionPerfilServiceWebClient
+                .post()
+                .uri(basePath + "/" + usuarioId)
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .bodyValue(Objects.requireNonNull(requestBody, "requestBody must not be null"))
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                    response -> {
+                        log.error("Error creando perfil: {} {}", response.statusCode(), response.statusCode().value());
+                        return response.bodyToMono(String.class)
+                            .flatMap(errorBody -> {
+                                org.springframework.web.reactive.function.client.WebClientResponseException exception = 
+                                    org.springframework.web.reactive.function.client.WebClientResponseException.create(
+                                        response.statusCode().value(),
+                                        response.statusCode().toString(),
+                                        response.headers().asHttpHeaders(),
+                                        errorBody != null ? errorBody.getBytes() : null,
+                                        java.nio.charset.StandardCharsets.UTF_8
+                                    );
+                                return Mono.error(exception);
+                            });
+                    })
+                .bodyToMono(Objects.requireNonNull(MAP_TYPE_REF, "MAP_TYPE_REF must not be null"))
+                .doOnSuccess(response -> log.info("Perfil creado exitosamente"))
+                .doOnError(error -> log.error("Error creando perfil: {}", error.getMessage()));
+    }
+
     public Mono<Map<String, Object>> obtenerPerfil(String usuarioId) {
         log.info("Proxy: GET {}/{}", basePath, usuarioId);
         return gestionPerfilServiceWebClient
                 .get()
                 .uri(basePath + "/" + usuarioId)
                 .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                    response -> {
+                        log.error("Error obteniendo perfil: {} {}", response.statusCode(), response.statusCode().value());
+                        return response.bodyToMono(String.class)
+                            .flatMap(errorBody -> {
+                                org.springframework.web.reactive.function.client.WebClientResponseException exception = 
+                                    org.springframework.web.reactive.function.client.WebClientResponseException.create(
+                                        response.statusCode().value(),
+                                        response.statusCode().toString(),
+                                        response.headers().asHttpHeaders(),
+                                        errorBody != null ? errorBody.getBytes() : null,
+                                        java.nio.charset.StandardCharsets.UTF_8
+                                    );
+                                return Mono.error(exception);
+                            });
+                    })
                 .bodyToMono(Objects.requireNonNull(MAP_TYPE_REF, "MAP_TYPE_REF must not be null"))
                 .doOnSuccess(response -> log.info("Perfil obtenido exitosamente"))
                 .doOnError(error -> log.error("Error obteniendo perfil: {}", error.getMessage()));

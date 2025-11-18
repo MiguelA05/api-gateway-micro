@@ -23,32 +23,6 @@ public class UsuarioUnificadoService {
         this.gestionPerfilServiceClient = gestionPerfilServiceClient;
     }
 
-    // Nota: Este método ya no se usa directamente, se maneja en el controller
-    // Se mantiene para futuras mejoras cuando el Domain Service tenga GET /usuarios/{usuario}
-    public Mono<Map<String, Object>> obtenerUsuarioCompleto(String usuario, String authToken) {
-        log.info("Obteniendo datos completos del usuario: {}", usuario);
-        
-        // El Domain Service no tiene endpoint GET /usuarios/{usuario} directo
-        // Por ahora, obtenemos datos de perfil
-        Mono<Map<String, Object>> datosPerfil = gestionPerfilServiceClient
-                .obtenerPerfil(usuario)
-                .onErrorResume(error -> {
-                    log.warn("Error obteniendo datos de perfil: {}", error.getMessage());
-                    return Mono.just(new HashMap<>());
-                });
-
-        return datosPerfil
-                .map(perfil -> {
-                    Map<String, Object> resultado = new HashMap<>();
-                    resultado.put("usuario", usuario);
-                    if (!perfil.isEmpty()) {
-                        resultado.put("perfil", perfil);
-                    }
-                    return resultado;
-                })
-                .doOnSuccess(result -> log.info("Datos completos del usuario obtenidos exitosamente"))
-                .doOnError(error -> log.error("Error obteniendo datos completos: {}", error.getMessage()));
-    }
 
     public Mono<Map<String, Object>> actualizarUsuarioCompleto(
             String usuario, 
@@ -112,37 +86,64 @@ public class UsuarioUnificadoService {
         if (requestBody.containsKey("linkOtraRed")) {
             datosPerfil.put("linkOtraRed", requestBody.get("linkOtraRed"));
         }
-        if (requestBody.containsKey("informacionContactoPublica")) {
-            datosPerfil.put("informacionContactoPublica", requestBody.get("informacionContactoPublica"));
+
+        // Si hay datos de seguridad, actualizarlos primero - si falla, no continuar
+        if (!datosSeguridad.isEmpty()) {
+            return domainServiceClient.actualizarUsuario(usuario, datosSeguridad, authToken)
+                    .doOnSuccess(response -> log.info("Actualización de seguridad exitosa para usuario: {}", usuario))
+                    .doOnError(error -> log.error("Error en actualización de seguridad - Tipo: {}, Mensaje: {}", 
+                        error.getClass().getName(), error.getMessage()))
+                    .flatMap(seguridadResponse -> {
+                        // Si la actualización de seguridad fue exitosa, actualizar perfil si hay datos
+                        if (!datosPerfil.isEmpty()) {
+                            log.info("Procediendo a actualizar perfil para usuario: {}", usuario);
+                            return gestionPerfilServiceClient.actualizarPerfil(usuario, datosPerfil)
+                                    .map(perfilResponse -> {
+                                        Map<String, Object> resultado = new HashMap<>();
+                                        resultado.put("mensaje", "Usuario actualizado exitosamente");
+                                        resultado.put("datosSeguridad", seguridadResponse);
+                                        resultado.put("datosPerfil", perfilResponse);
+                                        return resultado;
+                                    })
+                                    .onErrorResume(error -> {
+                                        log.warn("Error actualizando perfil, pero seguridad se actualizó: {}", error.getMessage());
+                                        Map<String, Object> resultado = new HashMap<>();
+                                        resultado.put("mensaje", "Usuario actualizado parcialmente (solo seguridad)");
+                                        resultado.put("datosSeguridad", seguridadResponse);
+                                        resultado.put("datosPerfil", new HashMap<>());
+                                        return Mono.just(resultado);
+                                    });
+                        } else {
+                            // Solo actualización de seguridad
+                            Map<String, Object> resultado = new HashMap<>();
+                            resultado.put("mensaje", "Usuario actualizado exitosamente");
+                            resultado.put("datosSeguridad", seguridadResponse);
+                            resultado.put("datosPerfil", new HashMap<>());
+                            return Mono.just(resultado);
+                        }
+                    })
+                    .doOnSuccess(result -> log.info("Datos completos del usuario actualizados exitosamente"))
+                    .doOnError(error -> log.error("Error actualizando datos completos: {}", error.getMessage()));
+        } else if (!datosPerfil.isEmpty()) {
+            // Solo actualización de perfil
+            return gestionPerfilServiceClient.actualizarPerfil(usuario, datosPerfil)
+                    .map(perfilResponse -> {
+                        Map<String, Object> resultado = new HashMap<>();
+                        resultado.put("mensaje", "Usuario actualizado exitosamente");
+                        resultado.put("datosSeguridad", new HashMap<>());
+                        resultado.put("datosPerfil", perfilResponse);
+                        return resultado;
+                    })
+                    .doOnSuccess(result -> log.info("Datos de perfil actualizados exitosamente"))
+                    .doOnError(error -> log.error("Error actualizando perfil: {}", error.getMessage()));
+        } else {
+            // No hay datos para actualizar
+            Map<String, Object> resultado = new HashMap<>();
+            resultado.put("mensaje", "No hay datos para actualizar");
+            resultado.put("datosSeguridad", new HashMap<>());
+            resultado.put("datosPerfil", new HashMap<>());
+            return Mono.just(resultado);
         }
-
-        // Actualizar ambos servicios en paralelo
-        Mono<Map<String, Object>> actualizacionSeguridad = datosSeguridad.isEmpty()
-                ? Mono.just(new HashMap<>())
-                : domainServiceClient.actualizarUsuario(usuario, datosSeguridad, authToken)
-                        .onErrorResume(error -> {
-                            log.warn("Error actualizando datos de seguridad: {}", error.getMessage());
-                            return Mono.just(new HashMap<>());
-                        });
-
-        Mono<Map<String, Object>> actualizacionPerfil = datosPerfil.isEmpty()
-                ? Mono.just(new HashMap<>())
-                : gestionPerfilServiceClient.actualizarPerfil(usuario, datosPerfil)
-                        .onErrorResume(error -> {
-                            log.warn("Error actualizando datos de perfil: {}", error.getMessage());
-                            return Mono.just(new HashMap<>());
-                        });
-
-        return Mono.zip(actualizacionSeguridad, actualizacionPerfil)
-                .map(tuple -> {
-                    Map<String, Object> resultado = new HashMap<>();
-                    resultado.put("mensaje", "Usuario actualizado exitosamente");
-                    resultado.put("datosSeguridad", tuple.getT1());
-                    resultado.put("datosPerfil", tuple.getT2());
-                    return resultado;
-                })
-                .doOnSuccess(result -> log.info("Datos completos del usuario actualizados exitosamente"))
-                .doOnError(error -> log.error("Error actualizando datos completos: {}", error.getMessage()));
     }
 }
 

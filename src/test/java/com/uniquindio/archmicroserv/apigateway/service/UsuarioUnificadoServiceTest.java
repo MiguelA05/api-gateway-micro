@@ -45,52 +45,6 @@ class UsuarioUnificadoServiceTest {
     }
 
     @Test
-    @DisplayName("Obtener usuario completo - Camino feliz")
-    void testObtenerUsuarioCompleto_Success() {
-        // Given
-        when(gestionPerfilServiceClient.obtenerPerfil(testUsuario))
-                .thenReturn(Mono.just(perfilData));
-
-        // When
-        Mono<Map<String, Object>> result = 
-                usuarioUnificadoService.obtenerUsuarioCompleto(testUsuario, testToken);
-
-        // Then
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertEquals(testUsuario, response.get("usuario"));
-                    assertTrue(response.containsKey("perfil"));
-                    
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> perfil = (Map<String, Object>) response.get("perfil");
-                    assertEquals("Test User", perfil.get("apodo"));
-                })
-                .verifyComplete();
-
-        verify(gestionPerfilServiceClient, times(1)).obtenerPerfil(testUsuario);
-    }
-
-    @Test
-    @DisplayName("Obtener usuario completo - Error en perfil")
-    void testObtenerUsuarioCompleto_PerfilError() {
-        // Given
-        when(gestionPerfilServiceClient.obtenerPerfil(testUsuario))
-                .thenReturn(Mono.error(new RuntimeException("Error de conexión")));
-
-        // When
-        Mono<Map<String, Object>> result = 
-                usuarioUnificadoService.obtenerUsuarioCompleto(testUsuario, testToken);
-
-        // Then - Debe retornar datos básicos sin perfil
-        StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertEquals(testUsuario, response.get("usuario"));
-                    assertFalse(response.containsKey("perfil"));
-                })
-                .verifyComplete();
-    }
-
-    @Test
     @DisplayName("Actualizar usuario completo - Solo datos de seguridad")
     void testActualizarUsuarioCompleto_OnlySecurityData() {
         // Given

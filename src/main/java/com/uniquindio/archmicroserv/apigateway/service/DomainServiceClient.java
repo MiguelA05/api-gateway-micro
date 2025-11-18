@@ -40,6 +40,22 @@ public class DomainServiceClient {
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .bodyValue(Objects.requireNonNull(requestBody, "requestBody must not be null"))
                 .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                    response -> {
+                        log.error("Error registrando usuario: {} {}", response.statusCode(), response.statusCode().value());
+                        return response.bodyToMono(String.class)
+                            .flatMap(errorBody -> {
+                                org.springframework.web.reactive.function.client.WebClientResponseException exception = 
+                                    org.springframework.web.reactive.function.client.WebClientResponseException.create(
+                                        response.statusCode().value(),
+                                        response.statusCode().toString(),
+                                        response.headers().asHttpHeaders(),
+                                        errorBody != null ? errorBody.getBytes() : null,
+                                        java.nio.charset.StandardCharsets.UTF_8
+                                    );
+                                return Mono.error(exception);
+                            });
+                    })
                 .bodyToMono(Objects.requireNonNull(MAP_TYPE_REF, "MAP_TYPE_REF must not be null"))
                 .doOnSuccess(response -> log.info("Registro exitoso"))
                 .doOnError(error -> log.error("Error en registro: {}", error.getMessage()));
@@ -53,6 +69,22 @@ public class DomainServiceClient {
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .bodyValue(Objects.requireNonNull(requestBody, "requestBody must not be null"))
                 .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                    response -> {
+                        log.error("Error autenticando usuario: {} {}", response.statusCode(), response.statusCode().value());
+                        return response.bodyToMono(String.class)
+                            .flatMap(errorBody -> {
+                                org.springframework.web.reactive.function.client.WebClientResponseException exception = 
+                                    org.springframework.web.reactive.function.client.WebClientResponseException.create(
+                                        response.statusCode().value(),
+                                        response.statusCode().toString(),
+                                        response.headers().asHttpHeaders(),
+                                        errorBody != null ? errorBody.getBytes() : null,
+                                        java.nio.charset.StandardCharsets.UTF_8
+                                    );
+                                return Mono.error(exception);
+                            });
+                    })
                 .bodyToMono(Objects.requireNonNull(MAP_TYPE_REF, "MAP_TYPE_REF must not be null"))
                 .doOnSuccess(response -> log.info("Autenticación exitosa"))
                 .doOnError(error -> log.error("Error en autenticación: {}", error.getMessage()));
@@ -87,22 +119,30 @@ public class DomainServiceClient {
     }
 
     public Mono<Map<String, Object>> obtenerUsuario(String usuario, String authToken) {
-        log.info("Proxy: GET {}/usuarios (con filtro para usuario: {})", basePath, usuario);
+        log.info("Proxy: GET {}/usuarios/{}", basePath, usuario);
         
         return domainServiceWebClient
                 .get()
-                .uri(uriBuilder -> uriBuilder
-                        .path(basePath + "/usuarios")
-                        .queryParam("pagina", "0")
-                        .build())
+                .uri(basePath + "/usuarios/" + usuario)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + authToken)
                 .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                    response -> {
+                        log.error("Error obteniendo usuario: {} {}", response.statusCode(), response.statusCode().value());
+                        return response.bodyToMono(String.class)
+                            .flatMap(errorBody -> {
+                                org.springframework.web.reactive.function.client.WebClientResponseException exception = 
+                                    org.springframework.web.reactive.function.client.WebClientResponseException.create(
+                                        response.statusCode().value(),
+                                        response.statusCode().toString(),
+                                        response.headers().asHttpHeaders(),
+                                        errorBody != null ? errorBody.getBytes() : null,
+                                        java.nio.charset.StandardCharsets.UTF_8
+                                    );
+                                return Mono.error(exception);
+                            });
+                    })
                 .bodyToMono(Objects.requireNonNull(MAP_TYPE_REF, "MAP_TYPE_REF must not be null"))
-                .map(response -> {
-                    // Filtrar el usuario específico de la lista
-                    // Esto es un workaround hasta que el Domain Service tenga GET /usuarios/{usuario}
-                    return response;
-                })
                 .doOnSuccess(response -> log.info("Usuario obtenido exitosamente"))
                 .doOnError(error -> log.error("Error obteniendo usuario: {}", error.getMessage()));
     }
@@ -116,6 +156,22 @@ public class DomainServiceClient {
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .bodyValue(Objects.requireNonNull(requestBody, "requestBody must not be null"))
                 .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                    response -> {
+                        log.error("Error actualizando usuario: {} {}", response.statusCode(), response.statusCode().value());
+                        return response.bodyToMono(String.class)
+                            .flatMap(errorBody -> {
+                                org.springframework.web.reactive.function.client.WebClientResponseException exception = 
+                                    org.springframework.web.reactive.function.client.WebClientResponseException.create(
+                                        response.statusCode().value(),
+                                        response.statusCode().toString(),
+                                        response.headers().asHttpHeaders(),
+                                        errorBody != null ? errorBody.getBytes() : null,
+                                        java.nio.charset.StandardCharsets.UTF_8
+                                    );
+                                return Mono.error(exception);
+                            });
+                    })
                 .bodyToMono(Objects.requireNonNull(MAP_TYPE_REF, "MAP_TYPE_REF must not be null"))
                 .doOnSuccess(response -> log.info("Usuario actualizado exitosamente"))
                 .doOnError(error -> log.error("Error actualizando usuario: {}", error.getMessage()));
