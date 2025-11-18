@@ -1,6 +1,7 @@
 package com.uniquindio.archmicroserv.apigateway.controller;
 
 import com.uniquindio.archmicroserv.apigateway.service.DomainServiceClient;
+import com.uniquindio.archmicroserv.apigateway.service.GestionPerfilServiceClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,9 @@ class AuthControllerTest {
 
     @Mock
     private DomainServiceClient domainServiceClient;
+
+    @Mock
+    private GestionPerfilServiceClient gestionPerfilServiceClient;
 
     @InjectMocks
     private AuthController authController;
@@ -73,7 +77,7 @@ class AuthControllerTest {
                 })
                 .verifyComplete();
 
-        verify(domainServiceClient, times(1)).registrarUsuario(registroRequest);
+        verify(domainServiceClient, times(1)).registrarUsuario(anyMap());
     }
 
     @Test
@@ -252,7 +256,7 @@ class AuthControllerTest {
                 })
                 .verifyComplete();
 
-        verify(domainServiceClient, times(1)).registrarUsuario(emptyRequest);
+        verify(domainServiceClient, times(1)).registrarUsuario(anyMap());
     }
 
     @Test

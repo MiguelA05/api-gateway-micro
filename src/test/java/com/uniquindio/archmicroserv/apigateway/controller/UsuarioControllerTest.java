@@ -66,6 +66,12 @@ class UsuarioControllerTest {
     @DisplayName("Obtener usuario completo - Camino feliz")
     void testObtenerUsuarioCompleto_Success() {
         // Given
+        Map<String, Object> usuarioData = new HashMap<>();
+        usuarioData.put("usuario", testUsuario);
+        usuarioData.put("correo", "test@example.com");
+        
+        when(domainServiceClient.obtenerUsuario(testUsuario, "valid-token-123"))
+                .thenReturn(Mono.just(usuarioData));
         when(gestionPerfilServiceClient.obtenerPerfil(testUsuario))
                 .thenReturn(Mono.just(perfilData));
 
@@ -87,6 +93,7 @@ class UsuarioControllerTest {
                 })
                 .verifyComplete();
 
+        verify(domainServiceClient, times(1)).obtenerUsuario(testUsuario, "valid-token-123");
         verify(gestionPerfilServiceClient, times(1)).obtenerPerfil(testUsuario);
     }
 
@@ -129,7 +136,13 @@ class UsuarioControllerTest {
     @Test
     @DisplayName("Obtener usuario completo - Perfil no encontrado")
     void testObtenerUsuarioCompleto_PerfilNotFound() {
-        // Given - El servicio retorna error
+        // Given
+        Map<String, Object> usuarioData = new HashMap<>();
+        usuarioData.put("usuario", testUsuario);
+        usuarioData.put("correo", "test@example.com");
+        
+        when(domainServiceClient.obtenerUsuario(testUsuario, "valid-token-123"))
+                .thenReturn(Mono.just(usuarioData));
         when(gestionPerfilServiceClient.obtenerPerfil(testUsuario))
                 .thenReturn(Mono.error(new RuntimeException("Perfil no encontrado")));
 
@@ -276,19 +289,16 @@ class UsuarioControllerTest {
         // Given - Error en seguridad pero perfil OK
         when(domainServiceClient.eliminarUsuario(anyString(), anyString()))
                 .thenReturn(Mono.error(new RuntimeException("Error eliminando seguridad")));
-        when(gestionPerfilServiceClient.eliminarPerfil(anyString()))
-                .thenReturn(Mono.empty());
-        doNothing().when(eventoPublisher).publicarEventoEliminacion(anyString(), anyString());
 
         // When
         Mono<ResponseEntity<Map<String, Object>>> result = 
                 usuarioController.eliminarUsuarioCompleto(testUsuario, validToken);
 
-        // Then - Debe completarse exitosamente porque el error se maneja
+        // Then - Debe retornar error 500 porque el error en seguridad se propaga
         StepVerifier.create(result)
                 .assertNext(response -> {
-                    assertEquals(HttpStatus.OK, response.getStatusCode());
-                    assertFalse((Boolean) response.getBody().get("error"));
+                    assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+                    assertTrue((Boolean) response.getBody().get("error"));
                 })
                 .verifyComplete();
 
@@ -326,6 +336,12 @@ class UsuarioControllerTest {
     @DisplayName("Obtener usuario completo - Perfil vacío")
     void testObtenerUsuarioCompleto_EmptyPerfil() {
         // Given
+        Map<String, Object> usuarioData = new HashMap<>();
+        usuarioData.put("usuario", testUsuario);
+        usuarioData.put("correo", "test@example.com");
+        
+        when(domainServiceClient.obtenerUsuario(testUsuario, "valid-token-123"))
+                .thenReturn(Mono.just(usuarioData));
         when(gestionPerfilServiceClient.obtenerPerfil(testUsuario))
                 .thenReturn(Mono.just(new HashMap<>()));
 

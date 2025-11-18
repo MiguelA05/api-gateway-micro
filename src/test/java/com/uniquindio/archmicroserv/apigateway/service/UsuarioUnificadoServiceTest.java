@@ -166,19 +166,15 @@ class UsuarioUnificadoServiceTest {
 
         when(domainServiceClient.actualizarUsuario(anyString(), anyMap(), anyString()))
                 .thenReturn(Mono.error(new RuntimeException("Error de conexión")));
-        when(gestionPerfilServiceClient.actualizarPerfil(anyString(), anyMap()))
-                .thenReturn(Mono.just(new HashMap<>()));
 
         // When
         Mono<Map<String, Object>> result = 
                 usuarioUnificadoService.actualizarUsuarioCompleto(testUsuario, requestBody, testToken);
 
-        // Then - Debe continuar y actualizar perfil
+        // Then - Debe propagar el error porque la actualización de seguridad falló
         StepVerifier.create(result)
-                .assertNext(response -> {
-                    assertEquals("Usuario actualizado exitosamente", response.get("mensaje"));
-                })
-                .verifyComplete();
+                .expectError(RuntimeException.class)
+                .verify();
     }
 
     @Test
@@ -198,10 +194,10 @@ class UsuarioUnificadoServiceTest {
         Mono<Map<String, Object>> result = 
                 usuarioUnificadoService.actualizarUsuarioCompleto(testUsuario, requestBody, testToken);
 
-        // Then - Debe continuar y actualizar seguridad
+        // Then - Debe continuar y actualizar seguridad parcialmente
         StepVerifier.create(result)
                 .assertNext(response -> {
-                    assertEquals("Usuario actualizado exitosamente", response.get("mensaje"));
+                    assertEquals("Usuario actualizado parcialmente (solo seguridad)", response.get("mensaje"));
                 })
                 .verifyComplete();
     }
@@ -253,10 +249,10 @@ class UsuarioUnificadoServiceTest {
         Mono<Map<String, Object>> result = 
                 usuarioUnificadoService.actualizarUsuarioCompleto(testUsuario, emptyRequest, testToken);
 
-        // Then - No debe llamar a ningún servicio
+        // Then - Debe retornar mensaje indicando que no hay datos
         StepVerifier.create(result)
                 .assertNext(response -> {
-                    assertEquals("Usuario actualizado exitosamente", response.get("mensaje"));
+                    assertEquals("No hay datos para actualizar", response.get("mensaje"));
                 })
                 .verifyComplete();
 

@@ -2,6 +2,7 @@ package com.uniquindio.archmicroserv.apigateway.integration;
 
 import com.uniquindio.archmicroserv.apigateway.controller.AuthController;
 import com.uniquindio.archmicroserv.apigateway.service.DomainServiceClient;
+import com.uniquindio.archmicroserv.apigateway.service.GestionPerfilServiceClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,9 @@ class AuthControllerIntegrationTest {
 
     @MockBean
     private DomainServiceClient domainServiceClient;
+
+    @MockBean
+    private GestionPerfilServiceClient gestionPerfilServiceClient;
 
     private Map<String, Object> registroRequest;
     private Map<String, Object> loginRequest;
